@@ -111,6 +111,31 @@
             -ms-transform: translateX(20px);
             transform: translateX(20px);
         }
+        /* Styles for the companion filter */
+        .filter-container {
+            position: fixed;
+            top: 70px; /* Position below the line toggle */
+            left: 20px;
+            background-color: rgba(30, 30, 30, 0.85);
+            padding: 10px 15px;
+            border-radius: 5px;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+        }
+        .filter-container label {
+            margin-right: 10px;
+            font-size: 14px;
+            color: #eee;
+        }
+        .filter-container select {
+            padding: 5px;
+            border-radius: 3px;
+            border: 1px solid #555;
+            background-color: #444;
+            color: #eee;
+            min-width: 150px; /* Give it some initial width */
+        }
     </style>
 </head>
 <body>
@@ -120,6 +145,14 @@
             <input type="checkbox" id="lineToggle" checked>
             <span class="slider"></span>
         </label>
+    </div>
+
+    <div class="filter-container">
+        <label for="companionFilter">Filter by Person:</label>
+        <select id="companionFilter">
+            <option value="all">Show All</option>
+            <!-- Companion options will be populated here by JavaScript -->
+        </select>
     </div>
 
     <!-- Old tooltip div is effectively removed by CSS -->
@@ -224,10 +257,8 @@
 
             // Add event listener for the toggle
             document.getElementById('lineToggle').addEventListener('change', function(event) {
-                const showLines = event.target.checked;
-                arrowHelpers.forEach(arrow => {
-                    arrow.visible = showLines;
-                });
+                const selectedCompanion = document.getElementById('companionFilter').value;
+                filterPointsByCompanion(selectedCompanion);
             });
 
             fetchData().then(data => {
@@ -352,6 +383,28 @@
                 const arrowColor = 0x00ffff;
                 const showLinesInitial = document.getElementById('lineToggle').checked; // Get initial state
 
+                // --- Populate Companion Filter ---
+                const companionFilterSelect = document.getElementById('companionFilter');
+                const uniqueCompanions = new Set();
+                data.forEach(item => {
+                    if (item.companions && typeof item.companions === 'string') {
+                        const companionsList = item.companions.split(',').map(c => c.trim()).filter(c => c !== '');
+                        companionsList.forEach(c => uniqueCompanions.add(c));
+                    }
+                });
+                // Clear existing options except the first 'Show All'
+                while (companionFilterSelect.options.length > 1) {
+                    companionFilterSelect.remove(1);
+                }
+                const sortedCompanions = Array.from(uniqueCompanions).sort(); // ADDED: Sort companions alphabetically
+                sortedCompanions.forEach(companion => { // MODIFIED: Iterate over sortedCompanions
+                    const option = document.createElement('option');
+                    option.value = companion;
+                    option.textContent = companion;
+                    companionFilterSelect.appendChild(option);
+                });
+                // END ADDED SECTION
+
                 for (let i = 0; i < arrowVertices.length - 1; i++) {
                     const startPoint = arrowVertices[i];
                     const endPoint = arrowVertices[i+1];
@@ -392,6 +445,9 @@
                 camera.lookAt(sceneCenter);
                 controls.update();
             }
+            // Add event listener for the companion filter
+            document.getElementById('companionFilter').addEventListener('change', onCompanionFilterChange);
+
             console.log(`Processed ${pointMeshes.length} points for visualization.`);
             console.log("Camera Position:", camera.position);
             console.log("Controls Target (LookAt):", controls.target);
@@ -454,6 +510,44 @@
             controls.update();
             renderer.render(scene, camera);
             labelRenderer.render(scene, camera); // Render CSS2D labels
+        }
+
+        // New function to handle companion filter change
+        function onCompanionFilterChange(event) {
+            const selectedCompanion = event.target.value;
+            filterPointsByCompanion(selectedCompanion);
+        }
+
+        // New function to filter points and arrows by companion
+        function filterPointsByCompanion(selectedCompanion) {
+            const showLines = document.getElementById('lineToggle').checked;
+            const isShowAll = selectedCompanion === 'all';
+
+            pointMeshes.forEach(mesh => {
+                let isVisible = false;
+                if (isShowAll) {
+                    isVisible = true;
+                } else {
+                    const companions = mesh.userData.companions || '';
+                    if (companions.split(',').map(c => c.trim()).includes(selectedCompanion)) {
+                        isVisible = true;
+                    }
+                }
+                mesh.visible = isVisible;
+            });
+
+            arrowHelpers.forEach((arrow, index) => {
+                // Assuming arrow i connects point i and point i+1
+                // This relies on pointMeshes and arrowHelpers being in corresponding order
+                // and that arrowHelpers[i] connects pointMeshes[i] to pointMeshes[i+1]
+                if (pointMeshes[index] && pointMeshes[index+1]) {
+                    const startPointVisible = pointMeshes[index].visible;
+                    const endPointVisible = pointMeshes[index+1].visible;
+                    arrow.visible = showLines && startPointVisible && endPointVisible;
+                } else {
+                    arrow.visible = false; // Should not happen if data is consistent
+                }
+            });
         }
 
         init();
