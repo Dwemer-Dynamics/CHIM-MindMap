@@ -26,7 +26,7 @@
             top: 0;
             width: 300px; /* Adjust width as needed */
             height: 100vh; /* Full viewport height */
-            background-color: rgba(30, 30, 30, 0.95);
+            background-color: rgba(30, 30, 30, 0.95); /* MODIFIED: Reverted background color */
             color: #eee;
             padding: 20px;
             box-sizing: border-box;
@@ -37,7 +37,7 @@
         }
         #info-panel h3 {
             margin-top: 0;
-            color: #00ffff;
+            color: rgb(212, 94, 0); /* MODIFIED: New text color for h3 */
         }
         #info-panel p {
             margin-bottom: 10px;
@@ -104,7 +104,7 @@
             border-radius: 50%; /* Rounded knob */
         }
         input:checked + .slider {
-            background-color: #00ffff; /* Track color when on (cyan) */
+            background-color: rgb(212, 94, 0); /* MODIFIED: Track color when on */
         }
         input:checked + .slider:before {
             -webkit-transform: translateX(20px); /* Knob position when on */
@@ -307,20 +307,20 @@
                 const sphereGeometry = new THREE.SphereGeometry(baseSphereRadius, 16, 12); 
                 
                 let pointColorValue;
-                if (index === 0 && data.length > 1) { // Ensure there's more than one point to have a distinct start/end
-                    pointColorValue = new THREE.Color(0x00ff00); // Bright Green for the first point
-                } else if (index === data.length - 1 && data.length > 1) {
-                    pointColorValue = new THREE.Color(0xff00ff); // Bright Magenta for the last point
-                } else {
-                    // Adjusted HSL for intermediate points to ensure full spectrum if start/end are colored
-                    let adjustedIndex = index;
-                    let adjustedLength = data.length;
-                    if (data.length > 2) { // Only adjust if there are intermediate points
-                        adjustedIndex = index -1; // effectively skip first index for HSL if start is special
-                        adjustedLength = data.length -2; // spectrum spread over remaining points
-                    }
-                    pointColorValue = new THREE.Color().setHSL(adjustedIndex / Math.max(1, adjustedLength), 0.7, 0.6);
+                // New color logic based on companions
+                let numCompanions = 0;
+                if (item.companions && typeof item.companions === 'string' && item.companions.trim() !== '') {
+                    numCompanions = item.companions.split(',').length;
                 }
+
+                const t = Math.min(1, Math.max(0, numCompanions / 10)); // Normalize between 0 and 1
+
+                // Interpolate between white (255, 255, 255) and red-orange (255, 120, 0)
+                const r = 255;
+                const g = Math.round(255 - 135 * t); // (255 -> 120)
+                const b = Math.round(255 - 255 * t); // (255 -> 0)
+
+                pointColorValue = new THREE.Color(r / 255, g / 255, b / 255);
                 
                 const sphereMaterial = new THREE.MeshBasicMaterial({ color: pointColorValue });
                 const sphereMesh = new THREE.Mesh(sphereGeometry, sphereMaterial);

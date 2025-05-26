@@ -1,9 +1,9 @@
 {
     "name": "CHIM-MindMap",
-    "description": "3D visualization of CHIM memory summaries and their vector embeddings.",
+    "description": "3D visualization of CHIM memories via TXT2VEC embeddings.",
     "config_url": "/HerikaServer/ext/CHIM-MindMap/index.html",
     "config_url_target": "_blank",
     "git_repo": "Dwemer-Dynamics/CHIM-MindMap",
-    "version": "0.1.0",
+    "version": "0.4.1",
     "schema_version": 2
 } 
