@@ -1,0 +1,20 @@
+{
+    "name": "dwemer-dynamics/chim-mindmap-3d",
+    "description": "3D visualization of CHIM memory summaries.",
+    "type": "project",
+    "require": {
+        "php": ">=8.0"
+    },
+    "authors": [
+        {
+            "name": "Your Name",
+            "email": "you@example.com"
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "App\\": "src/"
+        }
+    },
+    "minimum-stability": "stable"
+} 
