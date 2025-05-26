@@ -134,7 +134,7 @@
             border: 1px solid #555;
             background-color: #444;
             color: #eee;
-            min-width: 150px; /* Give it some initial width */
+            min-width: 250px; /* MODIFIED: Increased width */
         }
     </style>
 </head>
@@ -386,21 +386,27 @@
                 // --- Populate Companion Filter ---
                 const companionFilterSelect = document.getElementById('companionFilter');
                 const uniqueCompanions = new Set();
+                const companionCounts = {}; // ADDED: Object to store companion counts
+
                 data.forEach(item => {
                     if (item.companions && typeof item.companions === 'string') {
                         const companionsList = item.companions.split(',').map(c => c.trim()).filter(c => c !== '');
-                        companionsList.forEach(c => uniqueCompanions.add(c));
+                        companionsList.forEach(c => {
+                            uniqueCompanions.add(c);
+                            companionCounts[c] = (companionCounts[c] || 0) + 1; // ADDED: Increment count
+                        });
                     }
                 });
                 // Clear existing options except the first 'Show All'
                 while (companionFilterSelect.options.length > 1) {
                     companionFilterSelect.remove(1);
                 }
-                const sortedCompanions = Array.from(uniqueCompanions).sort(); // ADDED: Sort companions alphabetically
-                sortedCompanions.forEach(companion => { // MODIFIED: Iterate over sortedCompanions
+                const sortedCompanions = Array.from(uniqueCompanions).sort();
+                sortedCompanions.forEach(companion => {
                     const option = document.createElement('option');
                     option.value = companion;
-                    option.textContent = companion;
+                    const count = companionCounts[companion] || 0; // ADDED: Get count
+                    option.textContent = `${companion} (${count})`; // MODIFIED: Add count to text
                     companionFilterSelect.appendChild(option);
                 });
                 // END ADDED SECTION
