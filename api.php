@@ -2,6 +2,7 @@
 
 require __DIR__ . '/vendor/autoload.php';
 require __DIR__ . '/database.php';
+require __DIR__ . '/../../lib/utils_game_timestamp.php';
 
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *'); // For development, allow all origins
@@ -30,6 +31,17 @@ try {
             $vectorArray = explode(',', $vectorString);
             // Convert to float
             $row['embedding'] = array_map('floatval', $vectorArray);
+        }
+        
+        // Restore original Skyrim date conversion logic
+        if (isset($row['gamets_truncated'])) {
+            if (function_exists('convert_gamets2skyrim_long_date_no_time')) {
+                $row['skyrim_date'] = convert_gamets2skyrim_long_date_no_time($row['gamets_truncated']);
+            } else {
+                $row['skyrim_date'] = 'Date Error: Conversion function not found'; // Should not happen if include is correct
+            }
+        } else {
+            $row['skyrim_date'] = 'Date not available';
         }
     }
 

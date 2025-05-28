@@ -222,6 +222,10 @@
     <div id="info-panel">
         <h3>Point Information</h3>
         <div class="data-section">
+            <span class="label">In-Game Date:</span>
+            <p id="info-skyrim-date">No point selected.</p>
+        </div>
+        <div class="data-section">
             <span class="label">Summary:</span>
             <p id="info-summary">No point selected.</p>
         </div>
@@ -440,6 +444,7 @@
                     summary: item.summary, 
                     companions: item.companions, 
                     gamets_truncated: item.gamets_truncated,
+                    skyrim_date: item.skyrim_date,
                     originalColor: pointColorValue.clone(),
                     baseScaleForUIScaling: sphereMesh.scale.clone(), // ADDED: Store the gamets-based scale
                 };
@@ -578,16 +583,19 @@
             
             const infoSummary = document.getElementById('info-summary');
             const infoCompanions = document.getElementById('info-companions');
+            const infoSkyrimDate = document.getElementById('info-skyrim-date');
 
             if (intersects.length > 0) {
-                const clickedMesh = intersects[0].object; // The first intersected mesh
+                const clickedMesh = intersects[0].object; 
                 const clickedPointData = clickedMesh.userData;
                 
                 infoSummary.textContent = clickedPointData.summary || 'Not available';
                 infoCompanions.textContent = clickedPointData.companions || 'Not available';
+                infoSkyrimDate.textContent = clickedPointData.skyrim_date || 'Not available';
             } else {
                 infoSummary.textContent = 'Click a point for details.';
                 infoCompanions.textContent = '';
+                infoSkyrimDate.textContent = 'No point selected.';
             }
         }
 
