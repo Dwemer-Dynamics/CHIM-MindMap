@@ -417,6 +417,8 @@
         let activePoint = null; // For hover effect
 
         let uiPointScaleMultiplier = 1.0; // ADDED: For UI point scaling
+        let planetNodeTextures = []; // MODIFIED: Array for multiple planet textures
+        const NUM_PLANET_TEXTURES = 9; // ADDED: Number of textures to load
 
         let raycaster, mouse;
         let hoveredPoint = null;
@@ -548,13 +550,28 @@
         function init() {
             scene = new THREE.Scene();
 
-            // REMOVED: Old background image loading via TextureLoader
-            // const loader = new THREE.TextureLoader();
-            // loader.load('images/background.jpg', function(texture) {
-            //     scene.background = texture;
-            // }, undefined, function(err) {
-            //     console.error('An error happened while loading the background image.', err);
-            // });
+            // Load planet textures for nodes // MODIFIED SECTION
+            const textureLoader = new THREE.TextureLoader();
+            for (let i = 1; i <= NUM_PLANET_TEXTURES; i++) {
+                const texturePath = `images/planet_texture${i}.jpg`;
+                textureLoader.load(
+                    texturePath,
+                    function (texture) { // onLoad callback
+                        planetNodeTextures.push(texture);
+                        console.log(`Planet texture ${texturePath} loaded successfully. Total loaded: ${planetNodeTextures.length}`);
+                        // Optional: Check if all textures are loaded and trigger something
+                        // if (planetNodeTextures.length === NUM_PLANET_TEXTURES) {
+                        //     console.log("All planet textures loaded.");
+                        //     // If visualizeData might have run already, could trigger an update here
+                        // }
+                    },
+                    undefined, // onProgress callback (not needed here)
+                    function (err) { // onError callback
+                        console.error(`An error occurred loading texture ${texturePath}:`, err);
+                    }
+                );
+            }
+            // END MODIFIED SECTION
 
             camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
             camera.position.z = 30; // Adjusted camera position
@@ -763,7 +780,12 @@
                     pointColorValue = new THREE.Color(r / 255, g / 255, b / 255);
                 }
                 
-                const sphereMaterial = new THREE.MeshBasicMaterial({ color: pointColorValue });
+                const materialOptions = { color: pointColorValue };
+                if (planetNodeTextures.length > 0) {
+                    const randomTexture = planetNodeTextures[Math.floor(Math.random() * planetNodeTextures.length)];
+                    materialOptions.map = randomTexture;
+                }
+                const sphereMaterial = new THREE.MeshBasicMaterial(materialOptions);
                 const sphereMesh = new THREE.Mesh(sphereGeometry, sphereMaterial);
                 
                 sphereMesh.position.copy(currentPosition);
