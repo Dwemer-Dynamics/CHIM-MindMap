@@ -188,9 +188,81 @@
         /* Optional: Style the track for Firefox - for full orange track, this might be tricky */
         /* For a simpler cross-browser look, the thumb color is usually the main focus */
         .slider-container input[type="range"]::-moz-range-track {
-            background: #555; /* Or try your orange color here if thumb alone isn't enough */
+            background: #555; 
             border-radius: 5px;
             height: 8px;
+        }
+        /* Styles for the date filter UI */
+        .date-range-slider-container {
+            position: fixed;
+            top: 220px; /* Adjust as needed */
+            left: 20px;
+            background-color: rgba(30, 30, 30, 0.85);
+            padding: 10px 15px;
+            border-radius: 5px;
+            z-index: 1000;
+            width: 280px; /* Adjust width to fit content */
+        }
+        .date-range-slider-container .slider-group {
+            margin-bottom: 10px;
+        }
+        .date-range-slider-container label {
+            font-size: 14px;
+            color: #eee;
+            display: block;
+            margin-bottom: 5px;
+        }
+        .date-range-slider-container .date-display {
+            font-size: 12px;
+            color: #ccc;
+            min-height: 1.2em; /* Prevent layout jump */
+            margin-bottom: 5px;
+        }
+        .date-range-slider-container input[type="range"] {
+            width: 100%;
+            cursor: pointer;
+            /* Basic styling, can be enhanced like previous slider */
+            -webkit-appearance: none;
+            appearance: none;
+            height: 8px; 
+            background: #555; 
+            border-radius: 5px;
+            outline: none;
+        }
+        .date-range-slider-container input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px; 
+            height: 18px; 
+            background: rgb(212, 94, 0); 
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid #fff; 
+        }
+        .date-range-slider-container input[type="range"]::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            background: rgb(212, 94, 0);
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid #fff;
+        }
+        .date-range-slider-container .buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .date-range-slider-container button {
+            padding: 5px 10px;
+            border-radius: 3px;
+            border: 1px solid #666;
+            background-color: #555;
+            color: #eee;
+            cursor: pointer;
+            flex-grow: 1; /* Make buttons share space */
+        }
+        .date-range-slider-container button:hover {
+            background-color: #666;
         }
     </style>
 </head>
@@ -215,6 +287,26 @@
         <label for="pointSizeSlider">Memory Size:</label>
         <input type="range" id="pointSizeSlider" min="25" max="100" value="100">
         <span id="pointSizeValue" style="margin-left: 10px; font-size: 14px; color: #eee;">100%</span>
+    </div>
+
+    <div class="date-range-slider-container">
+        <div class="slider-group">
+            <label for="startDateGamets">Start Date:</label>
+            <span id="startDateDisplay" class="date-display">Not set</span>
+            <input type="range" id="startDateGamets" value="0">
+        </div>
+        <div class="slider-group">
+            <label for="endDateGamets">End Date:</label>
+            <span id="endDateDisplay" class="date-display">Not set</span>
+            <input type="range" id="endDateGamets" value="100">
+        </div>
+        <div class="overall-range-display" style="font-size: 10px; color: #aaa; margin-top: 5px;">
+            (Overall available range: <span id="overallMinDateDisplay">N/A</span> to <span id="overallMaxDateDisplay">N/A</span>)
+        </div>
+        <div class="buttons">
+            <button id="applyDateRangeFilter">Apply</button>
+            <button id="resetDateRangeFilter">Reset</button>
+        </div>
     </div>
 
     <!-- Old tooltip div is effectively removed by CSS -->
@@ -261,19 +353,126 @@
         let hoveredPoint = null;
         const tooltip = document.getElementById('tooltip');
 
-        async function fetchData() {
+        // --- Date to Gamets Conversion (JavaScript) ---
+        const SKYRIM_EPOCH_YEAR = 201; // 4E 201
+        const SKYRIM_EPOCH_MONTH_JS = 7; // August (0-indexed for JS Date)
+        const SKYRIM_EPOCH_DAY = 17;
+        // Base timestamp for 4E 201, August 17, 00:00:00 UTC - use UTC to avoid timezone issues in calculation
+        const skyrimEpochBaseTimestamp = Date.UTC(SKYRIM_EPOCH_YEAR, SKYRIM_EPOCH_MONTH_JS, SKYRIM_EPOCH_DAY, 0, 0, 0);
+        const GAMETS_PER_SECOND = 1 / 0.00864; // Approx 115.74
+
+        function skyrimDateToGamets(yyyyMmDdString, isEndDate = false) {
+            if (!yyyyMmDdString) return null;
+            const parts = yyyyMmDdString.split('-');
+            if (parts.length !== 3) return null;
+            
+            const year = parseInt(parts[0], 10);
+            const month = parseInt(parts[1], 10) - 1; // JS Date month is 0-indexed
+            const day = parseInt(parts[2], 10);
+
+            let targetTimestamp;
+            if (isEndDate) {
+                // For end date, consider end of that day
+                targetTimestamp = Date.UTC(year, month, day, 23, 59, 59, 999);
+            } else {
+                targetTimestamp = Date.UTC(year, month, day, 0, 0, 0, 0);
+            }
+
+            const secondsFromEpoch = (targetTimestamp - skyrimEpochBaseTimestamp) / 1000;
+            return Math.round(secondsFromEpoch * GAMETS_PER_SECOND);
+        }
+        // Note: gametsToSkyrimDateJS can be complex if trying to perfectly mirror PHP utils.
+        // For now, api.php provides min/max calendar dates directly.
+        // --- End Date Conversion ---
+
+        // --- Gamets to Skyrim Date (JavaScript) ---
+        const SKYRIM_MONTH_NAMES_JS = [
+            "Morning Star", "Sun's Dawn", "First Seed", "Rain's Hand", 
+            "Second Seed", "Mid Year", "Sun's Height", "Last Seed", 
+            "Hearthfire", "Frost Fall", "Sun's Dusk", "Evening Star"
+        ];
+
+        function gametsToSkyrimDateJS(gametsValue) {
+            if (gametsValue === null || gametsValue === undefined || gametsValue < 0) return "N/A";
+
+            const secondsOffset = gametsValue / GAMETS_PER_SECOND;
+            const targetTimestamp = skyrimEpochBaseTimestamp + (secondsOffset * 1000);
+            const dateObj = new Date(targetTimestamp);
+
+            const day = dateObj.getUTCDate();
+            const monthIndex = dateObj.getUTCMonth(); // 0-11
+            const year = dateObj.getUTCFullYear(); // This will be the Gregorian year of the epoch + offset
+            
+            // Simple way to display year: 4E + (year - 201 + 201) -> 4E + (Gregorian year of epoch + offset from epoch)
+            // This needs to be aligned with how 4E 201 is established.
+            // The skyrim_start_timestamp in PHP is '0201-08-17'. So year '201' is 4E 201.
+            const skyrimEraYear = year; // Since our epoch is 201, the JS year maps directly for display.
+
+            let daySuffix = 'th';
+            if (day === 1 || day === 21 || day === 31) daySuffix = 'st';
+            else if (day === 2 || day === 22) daySuffix = 'nd';
+            else if (day === 3 || day === 23) daySuffix = 'rd';
+
+            return `${day}${daySuffix} of ${SKYRIM_MONTH_NAMES_JS[monthIndex]}, 4E ${skyrimEraYear}`;
+        }
+        // --- End Gamets to Date ---
+
+        // Global vars for slider bounds
+        let overallMinGamets = 0;
+        let overallMaxGamets = 100; // Default, will be updated
+
+        async function fetchData(params = {}) {
             try {
-                const response = await fetch('api.php'); // This path is still correct
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+                let url = 'api.php'; // MODIFIED: Base URL
+                if (Object.keys(params).length > 0) {
+                    const queryParams = new URLSearchParams(params);
+                    url += `?${queryParams.toString()}`;
                 }
-                const data = await response.json();
-                console.log("Data fetched:", data);
-                return data;
+
+                const response = await fetch(url);
+                if (!response.ok) {
+                    // Try to parse error from structured response
+                    let errorMsg = `HTTP error! status: ${response.status}`;
+                    try {
+                        const errorData = await response.json();
+                        errorMsg = errorData.error || errorMsg;
+                    } catch (e) { /* ignore if error response isn't json */ }
+                    throw new Error(errorMsg);
+                }
+                const responseData = await response.json(); // MODIFIED: Expect structured response
+                console.log("Full response data fetched:", responseData);
+
+                // Set date picker min/max if available from initial load
+                if (params.initialLoad) {
+                    if (responseData.min_calendar_date && responseData.max_calendar_date) {
+                        document.getElementById('overallMinDateDisplay').textContent = responseData.min_calendar_date;
+                        document.getElementById('overallMaxDateDisplay').textContent = responseData.max_calendar_date;
+                    }
+                    if (responseData.overall_min_gamets !== null && responseData.overall_max_gamets !== null) {
+                        overallMinGamets = responseData.overall_min_gamets;
+                        overallMaxGamets = responseData.overall_max_gamets;
+
+                        const startDateSlider = document.getElementById('startDateGamets');
+                        const endDateSlider = document.getElementById('endDateGamets');
+                        startDateSlider.min = overallMinGamets;
+                        startDateSlider.max = overallMaxGamets;
+                        startDateSlider.value = overallMinGamets; // Default to full range
+                        endDateSlider.min = overallMinGamets;
+                        endDateSlider.max = overallMaxGamets;
+                        endDateSlider.value = overallMaxGamets; // Default to full range
+
+                        // Update display for initial slider values
+                        document.getElementById('startDateDisplay').textContent = gametsToSkyrimDateJS(overallMinGamets);
+                        document.getElementById('endDateDisplay').textContent = gametsToSkyrimDateJS(overallMaxGamets);
+                    }
+                }
+                return responseData.data; // MODIFIED: Return actual data array
             } catch (error) {
                 console.error("Could not fetch data:", error);
-                return [];
+                // Display error to user in the info panel or a dedicated error div
+                const infoSummary = document.getElementById('info-summary');
+                if(infoSummary) infoSummary.textContent = `Error fetching data: ${error.message}`;
+                return []; // Return empty array on error
             }
         }
 
@@ -339,7 +538,69 @@
             });
             // END ADDED SECTION
 
-            fetchData().then(data => {
+            // Add event listeners for date range sliders and buttons // MODIFIED SECTION
+            const startDateSlider = document.getElementById('startDateGamets');
+            const endDateSlider = document.getElementById('endDateGamets');
+            const startDateDisplay = document.getElementById('startDateDisplay');
+            const endDateDisplay = document.getElementById('endDateDisplay');
+
+            startDateSlider.addEventListener('input', () => {
+                let startVal = parseFloat(startDateSlider.value);
+                let endVal = parseFloat(endDateSlider.value);
+                if (startVal > endVal) {
+                    startDateSlider.value = endVal; // Prevent start from exceeding end
+                    startVal = endVal;
+                }
+                startDateDisplay.textContent = gametsToSkyrimDateJS(startVal);
+            });
+
+            endDateSlider.addEventListener('input', () => {
+                let startVal = parseFloat(startDateSlider.value);
+                let endVal = parseFloat(endDateSlider.value);
+                if (endVal < startVal) {
+                    endDateSlider.value = startVal; // Prevent end from being less than start
+                    endVal = startVal;
+                }
+                endDateDisplay.textContent = gametsToSkyrimDateJS(endVal);
+            });
+
+            document.getElementById('applyDateRangeFilter').addEventListener('click', () => {
+                const startGamets = parseFloat(startDateSlider.value);
+                const endGamets = parseFloat(endDateSlider.value);
+
+                if (endGamets >= startGamets) {
+                    fetchData({ start_gamets: startGamets, end_gamets: endGamets }).then(data => {
+                        if (data && data.length > 0) {
+                            visualizeData(data);
+                        } else {
+                            visualizeData([]); 
+                            console.log("No data to visualize for the selected date range or error occurred.");
+                            document.getElementById('info-summary').textContent = 'No data for selected date range.';
+                        }
+                    });
+                } else {
+                    alert("Start date cannot be after end date."); // Should be prevented by slider logic but good fallback
+                }
+            });
+
+            document.getElementById('resetDateRangeFilter').addEventListener('click', () => {
+                startDateSlider.value = overallMinGamets;
+                endDateSlider.value = overallMaxGamets;
+                startDateDisplay.textContent = gametsToSkyrimDateJS(overallMinGamets);
+                endDateDisplay.textContent = gametsToSkyrimDateJS(overallMaxGamets);
+                
+                fetchData({ initialLoad: false }).then(data => { // initialLoad: false as we don't need to reset bounds
+                    if (data && data.length > 0) {
+                        visualizeData(data);
+                    } else {
+                        visualizeData([]);
+                        console.log("No data to visualize or error occurred.");
+                    }
+                });
+            });
+            // END MODIFIED SECTION
+
+            fetchData({ initialLoad: true }).then(data => { // MODIFIED: Pass initialLoad true
                 if (data && data.length > 0) {
                     visualizeData(data);
                 } else {
