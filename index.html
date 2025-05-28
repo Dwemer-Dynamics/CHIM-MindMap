@@ -53,7 +53,7 @@
         /* Styles for the line toggle switch */
         .toggle-switch-container {
             position: fixed;
-            top: 20px;
+            top: 20px; /* Remains at the top */
             left: 20px;
             background-color: rgba(30, 30, 30, 0.85);
             padding: 10px 15px;
@@ -114,7 +114,7 @@
         /* Styles for the companion filter */
         .filter-container {
             position: fixed;
-            top: 120px; /* MODIFIED: Position below the point size slider */
+            top: 120px; /* MODIFIED: Below Memory Size Slider (70px + ~40px height + 10px gap) */
             left: 20px;
             background-color: rgba(30, 30, 30, 0.85);
             padding: 10px 15px;
@@ -139,7 +139,7 @@
         /* Styles for the point size slider */
         .slider-container {
             position: fixed;
-            top: 70px; /* MODIFIED: Position below the line toggle */
+            top: 70px; /* MODIFIED: Below Line Toggle (20px + ~40px height + 10px gap) */
             left: 20px;
             background-color: rgba(30, 30, 30, 0.85);
             padding: 10px 15px;
@@ -195,7 +195,7 @@
         /* Styles for the date filter UI */
         .date-range-slider-container {
             position: fixed;
-            top: 220px; /* Adjust as needed */
+            top: 175px; /* MODIFIED: Below Filter by Person (120px + ~45px height + 10px gap) */
             left: 20px;
             background-color: rgba(30, 30, 30, 0.85);
             padding: 10px 15px;
@@ -264,9 +264,75 @@
         .date-range-slider-container button:hover {
             background-color: #666;
         }
+
+        /* Info Icon and Tooltip Styles */
+        #info-icon-container {
+            position: fixed;
+            bottom: 20px; /* MODIFIED: Position from bottom */
+            left: 20px;   /* MODIFIED: Position from left */
+            z-index: 1001; 
+        }
+        #info-icon {
+            font-size: 18px;
+            color: #00ffff; /* Cyan, like other highlights */
+            cursor: help;
+            padding: 5px;
+            border-radius: 50%;
+            background-color: rgba(30, 30, 30, 0.85);
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid #00ffff;
+        }
+        #info-tooltip {
+            visibility: hidden; 
+            width: 280px; 
+            background-color: rgba(10, 10, 10, 0.97);
+            color: #fff;
+            text-align: left;
+            border-radius: 6px;
+            padding: 10px;
+            position: absolute;
+            z-index: 1;
+            bottom: 35px; /* MODIFIED: Position above the icon, adjust as needed based on icon height + desired gap */
+            left: 0;      /* MODIFIED: Align with the left of the container */
+            margin-left: 0; /* MODIFIED: Remove margin-left for centering when at corner */
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-size: 13px;
+            line-height: 1.6;
+            border: 1px solid #00ffff;
+        }
+        #info-tooltip ul {
+            padding-left: 20px;
+            margin-top: 5px;
+            margin-bottom: 0;
+        }
+        #info-tooltip li {
+            margin-bottom: 4px;
+        }
+        #info-icon-container:hover #info-tooltip {
+            visibility: visible;
+            opacity: 1;
+        }
     </style>
 </head>
 <body>
+    <div id="info-icon-container">
+        <div id="info-icon">ℹ</div>
+        <div id="info-tooltip">
+            <strong>Node Color Meanings:</strong>
+            <ul>
+                <li><span style="color: #00ff00;">Bright Green:</span> Earliest memory in the current view.</li>
+                <li><span style="color: #ff00ff;">Bright Purple:</span> Latest memory in the current view.</li>
+                <li><span style="color: #ffffff;">White:</span> Fewer people involved.</li>
+                <li><span style="color: #ffA500;">Yellow/Orange:</span> More people involved.</li>
+            </ul>
+        </div>
+    </div>
+
     <div class="toggle-switch-container">
         <label for="lineToggle">Show Timeline Lines:</label>
         <label class="toggle-switch">
@@ -275,18 +341,18 @@
         </label>
     </div>
 
+    <div class="slider-container">
+        <label for="pointSizeSlider">Memory Size:</label>
+        <input type="range" id="pointSizeSlider" min="25" max="100" value="100">
+        <span id="pointSizeValue" style="margin-left: 10px; font-size: 14px; color: #eee;">100%</span>
+    </div>
+
     <div class="filter-container">
         <label for="companionFilter">Filter by Person:</label>
         <select id="companionFilter">
             <option value="all">Show All</option>
             <!-- Companion options will be populated here by JavaScript -->
         </select>
-    </div>
-
-    <div class="slider-container">
-        <label for="pointSizeSlider">Memory Size:</label>
-        <input type="range" id="pointSizeSlider" min="25" max="100" value="100">
-        <span id="pointSizeValue" style="margin-left: 10px; font-size: 14px; color: #eee;">100%</span>
     </div>
 
     <div class="date-range-slider-container">
