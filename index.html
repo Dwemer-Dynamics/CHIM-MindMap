@@ -114,7 +114,7 @@
         /* Styles for the companion filter */
         .filter-container {
             position: fixed;
-            top: 70px; /* Position below the line toggle */
+            top: 120px; /* MODIFIED: Position below the point size slider */
             left: 20px;
             background-color: rgba(30, 30, 30, 0.85);
             padding: 10px 15px;
@@ -136,6 +136,62 @@
             color: #eee;
             min-width: 250px; /* MODIFIED: Increased width */
         }
+        /* Styles for the point size slider */
+        .slider-container {
+            position: fixed;
+            top: 70px; /* MODIFIED: Position below the line toggle */
+            left: 20px;
+            background-color: rgba(30, 30, 30, 0.85);
+            padding: 10px 15px;
+            border-radius: 5px;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+        }
+        .slider-container label {
+            margin-right: 10px;
+            font-size: 14px;
+            color: #eee;
+        }
+        .slider-container input[type="range"] {
+            width: 120px; /* Adjust width as needed */
+            cursor: pointer;
+            -webkit-appearance: none; /* Override default appearance */
+            appearance: none;
+            height: 8px; /* Track height */
+            background: #555; /* Track background */
+            border-radius: 5px;
+            outline: none;
+        }
+
+        /* Thumb (handle) styling */
+        .slider-container input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px; /* Thumb width */
+            height: 18px; /* Thumb height */
+            background: rgb(212, 94, 0); /* Orange thumb color */
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid #fff; /* White border for contrast */
+        }
+
+        .slider-container input[type="range"]::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            background: rgb(212, 94, 0);
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid #fff;
+        }
+
+        /* Optional: Style the track for Firefox - for full orange track, this might be tricky */
+        /* For a simpler cross-browser look, the thumb color is usually the main focus */
+        .slider-container input[type="range"]::-moz-range-track {
+            background: #555; /* Or try your orange color here if thumb alone isn't enough */
+            border-radius: 5px;
+            height: 8px;
+        }
     </style>
 </head>
 <body>
@@ -153,6 +209,12 @@
             <option value="all">Show All</option>
             <!-- Companion options will be populated here by JavaScript -->
         </select>
+    </div>
+
+    <div class="slider-container">
+        <label for="pointSizeSlider">Memory Size:</label>
+        <input type="range" id="pointSizeSlider" min="25" max="100" value="100">
+        <span id="pointSizeValue" style="margin-left: 10px; font-size: 14px; color: #eee;">100%</span>
     </div>
 
     <!-- Old tooltip div is effectively removed by CSS -->
@@ -188,6 +250,8 @@
         let pointMeshes = []; // To store the THREE.Mesh objects for raycasting
         let arrowHelpers = []; // To store arrow helpers for potential removal/update
         let activePoint = null; // For hover effect
+
+        let uiPointScaleMultiplier = 1.0; // ADDED: For UI point scaling
 
         let raycaster, mouse;
         let hoveredPoint = null;
@@ -260,6 +324,16 @@
                 const selectedCompanion = document.getElementById('companionFilter').value;
                 filterPointsByCompanion(selectedCompanion);
             });
+
+            // Add event listener for point size slider // ADDED SECTION
+            const pointSizeSlider = document.getElementById('pointSizeSlider');
+            const pointSizeValueDisplay = document.getElementById('pointSizeValue');
+            pointSizeSlider.addEventListener('input', function(event) {
+                uiPointScaleMultiplier = parseInt(event.target.value) / 100.0;
+                pointSizeValueDisplay.textContent = `${event.target.value}%`;
+                applyPointSizeScaling();
+            });
+            // END ADDED SECTION
 
             fetchData().then(data => {
                 if (data && data.length > 0) {
@@ -338,20 +412,22 @@
                 const sphereGeometry = new THREE.SphereGeometry(baseSphereRadius, 16, 12); 
                 
                 let pointColorValue;
-                // New color logic based on companions
-                let numCompanions = 0;
-                if (item.companions && typeof item.companions === 'string' && item.companions.trim() !== '') {
-                    numCompanions = item.companions.split(',').length;
+                if (index === 0 && data.length > 0) { // First point (earliest)
+                    pointColorValue = new THREE.Color(0x00ff00); // Bright Green
+                } else if (index === data.length - 1 && data.length > 0) { // Last point (latest)
+                    pointColorValue = new THREE.Color(0xff00ff); // Bright Purple (Magenta)
+                } else {
+                    // Existing color logic based on companions for intermediate points
+                    let numCompanions = 0;
+                    if (item.companions && typeof item.companions === 'string' && item.companions.trim() !== '') {
+                        numCompanions = item.companions.split(',').length;
+                    }
+                    const t = Math.min(1, Math.max(0, numCompanions / 10)); // Normalize between 0 and 1
+                    const r = 255;
+                    const g = Math.round(255 - 135 * t); // (255 -> 120) for white to red-orange
+                    const b = Math.round(255 - 255 * t); // (255 -> 0) for white to red-orange
+                    pointColorValue = new THREE.Color(r / 255, g / 255, b / 255);
                 }
-
-                const t = Math.min(1, Math.max(0, numCompanions / 10)); // Normalize between 0 and 1
-
-                // Interpolate between white (255, 255, 255) and red-orange (255, 120, 0)
-                const r = 255;
-                const g = Math.round(255 - 135 * t); // (255 -> 120)
-                const b = Math.round(255 - 255 * t); // (255 -> 0)
-
-                pointColorValue = new THREE.Color(r / 255, g / 255, b / 255);
                 
                 const sphereMaterial = new THREE.MeshBasicMaterial({ color: pointColorValue });
                 const sphereMesh = new THREE.Mesh(sphereGeometry, sphereMaterial);
@@ -365,8 +441,12 @@
                     companions: item.companions, 
                     gamets_truncated: item.gamets_truncated,
                     originalColor: pointColorValue.clone(),
-                    originalScale: sphereMesh.scale.clone()
+                    baseScaleForUIScaling: sphereMesh.scale.clone(), // ADDED: Store the gamets-based scale
                 };
+
+                // Apply initial UI scaling
+                sphereMesh.scale.multiplyScalar(uiPointScaleMultiplier);
+                sphereMesh.userData.originalScale = sphereMesh.scale.clone(); // Set originalScale after UI scaling
 
                 scene.add(sphereMesh);
                 pointMeshes.push(sphereMesh);
@@ -555,6 +635,29 @@
                 }
             });
         }
+
+        // New function to apply UI point size scaling // ADDED FUNCTION
+        function applyPointSizeScaling() {
+            if (!pointMeshes || pointMeshes.length === 0) return;
+
+            pointMeshes.forEach(mesh => {
+                if (mesh.userData.baseScaleForUIScaling) {
+                    // Start from the base scale and apply the UI multiplier
+                    mesh.scale.copy(mesh.userData.baseScaleForUIScaling).multiplyScalar(uiPointScaleMultiplier);
+                    // Update originalScale so hover effects are relative to the new UI-scaled size
+                    mesh.userData.originalScale.copy(mesh.scale);
+                }
+            });
+
+            // If a point is currently active/hovered, its scale might need to be re-adjusted
+            // based on the new originalScale to maintain the hover magnification effect correctly.
+            if (activePoint && activePoint.userData.originalScale) {
+                activePoint.scale.copy(activePoint.userData.originalScale).multiplyScalar(1.5);
+            }
+
+            renderer.render(scene, camera); // Re-render the scene
+        }
+        // END ADDED FUNCTION
 
         init();
         animate();
