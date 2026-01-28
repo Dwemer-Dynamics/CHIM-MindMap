@@ -79,6 +79,32 @@ try {
     $stmt->execute($params);
     $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+    // Diagnostic checks
+    $diagnostics = [];
+    
+    $countQuery = $pdo->query('SELECT COUNT(*) as total, COUNT(embedding) as with_embedding FROM memory_summary WHERE gamets_truncated > 0');
+    $counts = $countQuery->fetch(PDO::FETCH_ASSOC);
+    
+    if ($counts['total'] == 0) {
+        $diagnostics[] = [
+            'type' => 'error',
+            'message' => 'No memory summaries found. Play the game with CHIM active, then sync memories in the CHIM Config Hub (Events and Memories page).'
+        ];
+    } elseif ($counts['with_embedding'] == 0) {
+        $diagnostics[] = [
+            'type' => 'error', 
+            'message' => "Found {$counts['total']} memories but none have embeddings. Enable TXT2VEC in Global Settings > Memory, ensure the service is running on port 8082, then sync memories."
+        ];
+    } elseif ($counts['with_embedding'] < $counts['total']) {
+        $pct = round(($counts['with_embedding'] / $counts['total']) * 100);
+        $diagnostics[] = [
+            'type' => 'warning',
+            'message' => "{$counts['with_embedding']} of {$counts['total']} memories have embeddings ({$pct}%). Run memory sync in Events and Memories to complete."
+        ];
+    }
+    
+    $response['diagnostics'] = $diagnostics;
+
     foreach ($results as &$row) {
         if (isset($row['embedding'])) {
             $vectorString = trim($row['embedding'], '[]');

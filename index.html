@@ -336,6 +336,11 @@
         </div>
     </div>
 
+    <div id="diagnostic-banner" style="display: none; position: fixed; top: 20px; left: 50%; transform: translateX(-50%); 
+        background-color: rgba(220, 53, 69, 0.95); color: #fff; padding: 15px 25px; border-radius: 8px; 
+        z-index: 1001; max-width: 600px; text-align: center; font-size: 14px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
+    </div>
+
     <div class="toggle-switch-container">
         <label for="lineToggle">Show Timeline Lines:</label>
         <label class="toggle-switch">
@@ -537,6 +542,25 @@
                         document.getElementById('endDateDisplay').textContent = gametsToSkyrimDateJS(overallMaxGamets);
                     }
                 }
+                
+                // Check for diagnostics and display them
+                if (responseData.diagnostics && responseData.diagnostics.length > 0) {
+                    const banner = document.getElementById('diagnostic-banner');
+                    const errorDiag = responseData.diagnostics.find(d => d.type === 'error');
+                    const warningDiag = responseData.diagnostics.find(d => d.type === 'warning');
+                    
+                    if (errorDiag) {
+                        banner.style.backgroundColor = 'rgba(220, 53, 69, 0.95)';
+                        banner.textContent = errorDiag.message;
+                        banner.style.display = 'block';
+                    } else if (warningDiag) {
+                        banner.style.backgroundColor = 'rgba(255, 193, 7, 0.95)';
+                        banner.style.color = '#000';
+                        banner.textContent = warningDiag.message;
+                        banner.style.display = 'block';
+                    }
+                }
+                
                 return responseData.data; // MODIFIED: Return actual data array
             } catch (error) {
                 console.error("Could not fetch data:", error);
@@ -661,7 +685,7 @@
                         } else {
                             visualizeData([]); 
                             console.log("No data to visualize for the selected date range or error occurred.");
-                            document.getElementById('info-summary').textContent = 'No data for selected date range.';
+                            document.getElementById('info-summary').textContent = 'No memories with embeddings found for selected date range. Check the banner above for details.';
                         }
                     });
                 } else {
@@ -681,6 +705,7 @@
                     } else {
                         visualizeData([]);
                         console.log("No data to visualize or error occurred.");
+                        document.getElementById('info-summary').textContent = 'No memories with embeddings found. Check the banner above for details.';
                     }
                 });
             });
@@ -691,6 +716,7 @@
                     visualizeData(data);
                 } else {
                     console.log("No data to visualize or error occurred.");
+                    document.getElementById('info-summary').textContent = 'No memories with embeddings found. Check the banner above for details.';
                 }
             });
         }
