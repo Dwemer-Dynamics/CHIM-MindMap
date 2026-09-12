@@ -51,4 +51,4 @@ Feel free to submit issues and enhancement requests!
 
 ## 📄 License
 
-This project is licensed under the MIT License. (Assuming, please update if incorrect) 
+This project is licensed under GNU GPLv3 only. See LICENSE and LICENSING.md. 
