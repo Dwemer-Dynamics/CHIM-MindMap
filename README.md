@@ -51,4 +51,4 @@ Feel free to submit issues and enhancement requests!
 
 ## 📄 License
 
-This project is licensed under GNU GPLv3 only. See LICENSE and LICENSING.md. 
+This project is licensed under GNU GPLv3 only. See LICENSE and LICENSING.md.
